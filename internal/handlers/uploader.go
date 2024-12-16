@@ -50,14 +50,14 @@ func VideoUploader(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cmd := exec.Command("ffmpeg", "-i", inputFilePath, "-codec: copy", "-start_number", "0", "-hls_time", "10", "-hls_list_size", "0", "-f", "hls", filepath.Join(outputPath, "index.m3u8"))
-	err = cmd.Run()
+	hlsFile := filepath.Join(outputPath, "index.m3u8")
+	cmd := exec.Command("ffmpeg", "-i", inputFilePath, "-codec", "copy", "-start_number", "0", "-hls_time", "10", "-hls_list_size", "0", "-f", "hls", hlsFile)
+	output, err := cmd.CombinedOutput()
 	if err != nil {
-		logrus.Info(err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		logrus.WithError(err).WithField("output", string(output)).Error("ffmpeg command failed")
+		http.Error(w, "Error processing video", http.StatusInternalServerError)
 		return
 	}
-
 	_, err = db.DB.Exec("INSERT INTO playlists (id, video_id, name, path) VALUES ($1, $2, $3, $4)", videoID, header.Filename, header.Filename, outputPath)
 	if err != nil {
 		logrus.Fatal(err)

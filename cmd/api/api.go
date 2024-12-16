@@ -2,17 +2,21 @@ package api
 
 import (
 	"fmt"
+	"html/template"
 	"net/http"
 	"os"
 	"time"
 
 	"github.com/feezyhendrix/go-hls-server/internal/db"
 	"github.com/feezyhendrix/go-hls-server/internal/handlers"
+	"github.com/feezyhendrix/go-hls-server/internal/views"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/joho/godotenv"
 	"github.com/sirupsen/logrus"
 )
+
+var templates = template.Must(template.ParseGlob("templates/*.html"))
 
 func Run() {
 	err := godotenv.Load()
@@ -50,9 +54,14 @@ func router() *chi.Mux {
 	r.Use(middleware.RequestID)
 	r.Use(logRequest)
 
-	r.Post("/upload", handlers.VideoUploader)
-	r.Get("/playlists", handlers.GetAllPlaylistsHandler)
-	r.Get("/segment/{videoId}/{name}.ts", handlers.GetSegmentHandler)
+	r.Handle("/static/*", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
+
+	/// Templates
+	r.Get("/", views.IndexView)
+
+	r.Post("/api/v1/upload", handlers.VideoUploader)
+	r.Get("/api/v1/playlists", handlers.GetAllPlaylistsHandler)
+	r.Get("/api/v1/segment/{videoId}/{name}.ts", handlers.GetSegmentHandler)
 
 	return r
 }
